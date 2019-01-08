@@ -1,5 +1,8 @@
 #!/bin/bash
 bash submodules.sh
+# Avoid treating warnings as errors
+export CFLAGS="-Wno-error"
+export CXXFLAGS="-Wno-error"
 export ARCH=arm
 main_menu() {
 PS3='Please enter your choice: '
