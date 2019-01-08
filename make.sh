@@ -35,7 +35,7 @@ done
 compile() {
 make \
 ARCH=arm \
-CROSS_COMPILE=~/work/gcc-linaro-7.1.1/bin/arm-linux-gnueabihf-
+CROSS_COMPILE=../gcc-linaro-7.1.1/bin/arm-linux-gnueabihf-
 }
 make_zip() {
 cp arch/arm/boot/zImage AnyKernel2/
