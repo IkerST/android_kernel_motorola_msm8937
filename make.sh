@@ -3,7 +3,7 @@ bash submodules.sh
 export ARCH=arm
 main_menu() {
 PS3='Please enter your choice: '
-options=("Moto E5 Plus XT1924-7" "Moto E5 Plus XT1924-5" "Moto E5 Play XT1924-4" "Quit")
+options=("Moto E5 Plus XT1924-7" "Moto E5 Plus XT1924-5" "Moto E5 Play XT1924-4" "Moto G6 Play (jeter)" "Quit")
 select opt in "${options[@]}"
 do
     case $opt in
@@ -20,6 +20,11 @@ do
             complile
 	    break
             ;;
+	"Moto G6 Play (jeter)")
+	    make jeter_defconfig
+	    compile
+	    break
+	    ;;
         "Quit")
             break
             ;;
