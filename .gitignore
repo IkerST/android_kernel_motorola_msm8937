@@ -101,4 +101,4 @@ all.config
 AnyKernel2/
 
 # WLAN Drivers
-drivers/staging/prima
+drivers/staging/prima/
