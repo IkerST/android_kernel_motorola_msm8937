@@ -1,3 +1,4 @@
+EXTRA_CFLAGS=-w
 # MSM Machine Support
 
 snd-soc-hostless-pcm-objs := msm-pcm-hostless.o

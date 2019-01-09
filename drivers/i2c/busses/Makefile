@@ -1,3 +1,4 @@
+EXTRA_CFLAGS=-w
 #
 # Makefile for the i2c bus drivers.
 #

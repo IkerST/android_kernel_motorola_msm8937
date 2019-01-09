@@ -55,7 +55,7 @@ static void log_modem_sfr(void)
 	u32 size;
 	char *smem_reason;
 
-	mmi_set_pureason(PU_REASON_MODEM_RESET);
+	// mmi_set_pureason(PU_REASON_MODEM_RESET);
 
 	smem_reason = smem_get_entry_no_rlock(SMEM_SSR_REASON_MSS0, &size, 0,
 							SMEM_ANY_HOST_FLAG);

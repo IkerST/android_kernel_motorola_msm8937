@@ -2457,7 +2457,7 @@ static int qpnp_hap_parse_dt(struct qpnp_hap *hap)
 		dev_err(&spmi->dev, "Unable to read vmax\n");
 		return rc;
 	}
-
+/*
 	if (strncmp(bi_bootmode(), FACTORY_MODE_STR, BOOTMODE_MAX_LEN)) {
 
 		hap->context_haptics = of_property_read_bool(spmi->dev.of_node,
@@ -2473,7 +2473,7 @@ static int qpnp_hap_parse_dt(struct qpnp_hap *hap)
 				dev_info(&spmi->dev, "default vmax low\n");
 		}
 	}
-
+*/
 	hap->ilim_ma = QPNP_HAP_ILIM_MIN_MV;
 	rc = of_property_read_u32(spmi->dev.of_node,
 			"qcom,ilim-ma", &temp);

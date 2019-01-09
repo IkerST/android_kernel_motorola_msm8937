@@ -14,6 +14,7 @@
 #define TRACE_SYSTEM rndis_ipa
 #define TRACE_INCLUDE_FILE rndis_ipa_trace
 
+
 #if !defined(_RNDIS_IPA_TRACE_H) || defined(TRACE_HEADER_MULTI_READ)
 #define _RNDIS_IPA_TRACE_H
 
@@ -77,5 +78,5 @@ TRACE_EVENT(
 
 /* This part must be outside protection */
 #undef TRACE_INCLUDE_PATH
-#define TRACE_INCLUDE_PATH .
+#define TRACE_INCLUDE_PATH ../../../drivers/net/ethernet/msm
 #include <trace/define_trace.h>

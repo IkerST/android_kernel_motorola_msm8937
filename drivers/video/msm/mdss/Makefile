@@ -1,3 +1,4 @@
+EXTRA_CFLAGS=-w
 ccflags-y += -I$(src)
 
 obj-$(CONFIG_FB_MSM_MDSS_MHL3) += mhl3/

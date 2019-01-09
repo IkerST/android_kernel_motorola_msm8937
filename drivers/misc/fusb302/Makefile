@@ -1,3 +1,4 @@
+EXTRA_CFLAGS=-w
 # Required flag to configure the core to operate with the Linux kernel
 ccflags-$(CONFIG_FUSB302) += -DFSC_PLATFORM_LINUX
 # Optional flag to enable interrupt-driven operation

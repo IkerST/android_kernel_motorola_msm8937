@@ -1,3 +1,4 @@
+EXTRA_CFLAGS=-w
 snd-soc-88pm860x-objs := 88pm860x-codec.o
 snd-soc-ab8500-codec-objs := ab8500-codec.o
 snd-soc-ac97-objs := ac97.o

@@ -683,7 +683,7 @@ else
   stackp-flag := $(call cc-option, -fno-stack-protector)
 endif
 endif
-KBUILD_CFLAGS += $(stackp-flag)
+# KBUILD_CFLAGS += $(stackp-flag)
 
 ifdef CONFIG_KCOV
   ifeq ($(call cc-option, $(CFLAGS_KCOV)),)

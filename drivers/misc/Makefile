@@ -1,3 +1,4 @@
+EXTRA_CFLAGS=-w
 #
 # Makefile for misc devices that really don't fit anywhere else.
 #

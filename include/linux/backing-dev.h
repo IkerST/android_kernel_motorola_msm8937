@@ -51,6 +51,8 @@ struct bdi_writeback {
 
 	unsigned long last_old_flush;	/* last old data flush */
 
+	int dirty_exceeded;
+
 	struct delayed_work dwork;	/* work item used for writeback */
 	struct list_head b_dirty;	/* dirty inodes */
 	struct list_head b_io;		/* parked for writeback */

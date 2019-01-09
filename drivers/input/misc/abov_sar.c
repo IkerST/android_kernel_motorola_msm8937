@@ -12,6 +12,7 @@
 #define DEBUG
 #define DRIVER_NAME "abov_sar"
 #define USE_SENSORS_CLASS
+#define USE_KERNEL_SUSPEND
 
 #define MAX_WRITE_ARRAY_SIZE 32
 #include <linux/module.h>
@@ -29,6 +30,11 @@
 #include <linux/notifier.h>
 #include <linux/usb.h>
 #include <linux/power_supply.h>
+
+#if defined(CONFIG_FB)
+#include <linux/fb.h>
+#endif
+
 #include <linux/input/abov_sar.h> /* main struct, interrupt,init,pointers */
 
 #define BOOT_UPDATE_ABOV_FIRMWARE 1
@@ -182,18 +188,19 @@ static int abov_detect(struct i2c_client *client)
 	if (client) {
 		for (i = 0; i < 3; i++) {
 			returnValue = i2c_smbus_read_byte_data(client, address);
-			LOG_INFO("abov read_register for %d time Addr: 0x%x Return: 0x%x\n",
-					i, address, returnValue);
-			if (returnValue >= 0) {
-				if (value == returnValue) {
-					LOG_INFO("abov detect success!\n");
-					return 1;
-				}
+			if (value == returnValue) {
+				LOG_INFO("abov detect success!\n");
+				return NORMAL_MODE;
+			}
+
+			if (abov_tk_fw_mode_enter(client) == 0) {
+				LOG_INFO("abov boot detect success!\n");
+				return BOOTLOADER_MODE;
 			}
 		}
 	}
 	LOG_INFO("abov detect failed!!!\n");
-	return 0;
+	return UNKONOW_MODE;
 }
 
 /**
@@ -879,6 +886,46 @@ static int ps_notify_callback(struct notifier_block *self,
 	return 0;
 }
 
+#if defined(CONFIG_FB)
+static void fb_notify_resume_work(struct work_struct *work)
+{
+	pabovXX_t this = container_of(work, abovXX_t, fb_notify_work);
+	pabov_t pDevice = NULL;
+	struct input_dev *input_top = NULL;
+	struct input_dev *input_bottom = NULL;
+	int ret = 0;
+
+	pDevice = this->pDevice;
+	input_top = pDevice->pbuttonInformation->input_top;
+	input_bottom = pDevice->pbuttonInformation->input_bottom;
+
+	LOG_DBG("Lcd suspend/resume event,going to force calibrate\n");
+	ret = write_register(this, ABOV_RECALI_REG, 0x01);
+	if (ret < 0)
+		LOG_DBG(" Lcd suspend/resume,calibrate cap sensor failed\n");
+}
+
+static int fb_notifier_callback(struct notifier_block *self,
+				unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	int *blank;
+	pabovXX_t this = container_of(self, abovXX_t, fb_notif);
+	if ((event == FB_EVENT_BLANK) &&
+		evdata && evdata->data) {
+		blank = evdata->data;
+		if ((*blank == FB_BLANK_POWERDOWN)
+			|| (*blank == FB_BLANK_UNBLANK)) {
+			LOG_DBG("fb notification: event = %lu blank = %d\n",
+				 event, *blank);
+			schedule_work(&this->fb_notify_work);
+		}
+	}
+
+	return 0;
+}
+#endif
+
 static char *toString(u8 *buffer, int len)
 {
 	int i = 0;
@@ -1255,8 +1302,10 @@ static int abov_fw_update(bool force)
 		return rc;
 	}
 
-	read_register(this, ABOV_VERSION_REG, &fw_version);
-	read_register(this, ABOV_MODELNO_REG, &fw_modelno);
+	if (force == false) {
+		read_register(this, ABOV_VERSION_REG, &fw_version);
+		read_register(this, ABOV_MODELNO_REG, &fw_modelno);
+	}
 
 	fw_file_modeno = fw->data[1];
 	fw_file_version = fw->data[5];
@@ -1299,7 +1348,7 @@ static ssize_t capsense_fw_ver_show(struct class *class,
 
 	read_register(this, ABOV_VERSION_REG, &fw_version);
 
-	return snprintf(buf, 16, "0x%x\n", fw_version);
+	return snprintf(buf, 16, "ABOV:0x%x\n", fw_version);
 }
 
 static ssize_t capsense_update_fw_store(struct class *class,
@@ -1370,12 +1419,12 @@ static CLASS_ATTR(force_update_fw, 0660, capsense_fw_ver_show, capsense_force_up
 
 static void capsense_update_work(struct work_struct *work)
 {
-	pabovXX_t this = container_of(work, abovXX_t, fw_update_work);
+	pabovXX_t this = container_of(work, abovXX_t, fw_update_work.worker);
 
 	LOG_INFO("%s: start update firmware\n", __func__);
 	mutex_lock(&this->mutex);
 	this->loading_fw = true;
-	abov_fw_update(false);
+	abov_fw_update(this->fw_update_work.force_update);
 	this->loading_fw = false;
 	mutex_unlock(&this->mutex);
 	LOG_INFO("%s: update firmware end\n", __func__);
@@ -1394,6 +1443,7 @@ static int abov_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	pabov_t pDevice = 0;
 	pabov_platform_data_t pplatData = 0;
 	int ret;
+	bool isForceUpdate = false;
 	struct input_dev *input_top = NULL;
 	struct input_dev *input_bottom = NULL;
 	struct power_supply *psy = NULL;
@@ -1401,8 +1451,12 @@ static int abov_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	LOG_INFO("abov_probe()\n");
 
 	/* detect if abov exist or not */
-	if (abov_detect(client) == 0) {
+	ret = abov_detect(client);
+	if (ret == UNKONOW_MODE)
 		return -ENODEV;
+	else if (ret == BOOTLOADER_MODE) {
+		LOG_INFO("abov enter boot mode\n");
+		isForceUpdate = true;
 	}
 
 	pplatData = kzalloc(sizeof(pplatData), GFP_KERNEL);
@@ -1595,6 +1649,11 @@ static int abov_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		}
 		abovXX_sar_init(this);
 
+		this->loading_fw = false;
+		this->fw_update_work.force_update = isForceUpdate;
+		INIT_WORK(&this->fw_update_work.worker, capsense_update_work);
+		schedule_work(&this->fw_update_work.worker);
+
 		write_register(this, ABOV_CTRL_MODE_RET, 0x02);
 		mEnabled = 0;
 
@@ -1618,16 +1677,27 @@ static int abov_probe(struct i2c_client *client, const struct i2c_device_id *id)
 			}
 		}
 
-		this->loading_fw = false;
-		INIT_WORK(&this->fw_update_work, capsense_update_work);
-		schedule_work(&this->fw_update_work);
+#if defined(CONFIG_FB)
+		INIT_WORK(&this->fb_notify_work, fb_notify_resume_work);
+		this->fb_notif.notifier_call = fb_notifier_callback;
+		ret = fb_register_client(&this->fb_notif);
+		if (ret) {
+			LOG_DBG("Unable to register fb_notifier: %d\n", ret);
+			goto free_fb_notifier;
+		}
+#endif
 
 		return  0;
 	}
 	return -ENOMEM;
 
-free_ps_notifier:
+free_fb_notifier:
 	power_supply_unreg_notifier(&this->ps_notif);
+
+free_ps_notifier:
+	LOG_DBG("%s free ps notifier:.\n", __func__);
+	regulator_disable(pplatData->cap_svdd);
+	regulator_put(pplatData->cap_svdd);
 
 err_svdd_error:
 	LOG_DBG("%s svdd defer.\n", __func__);
@@ -1653,6 +1723,11 @@ static int abov_remove(struct i2c_client *client)
 	pabov_platform_data_t pplatData = 0;
 	pabov_t pDevice = 0;
 	pabovXX_t this = i2c_get_clientdata(client);
+
+#if defined(CONFIG_FB)
+	fb_unregister_client(&this->fb_notif);
+#endif
+	power_supply_unreg_notifier(&this->ps_notif);
 
 	pDevice = this->pDevice;
 	if (this && pDevice) {
@@ -1691,7 +1766,7 @@ static int abov_suspend(struct i2c_client *client, pm_message_t mesg)
 {
 	pabovXX_t this = i2c_get_clientdata(client);
 
-	abovXX_sar_suspend(this);
+	abovXX_suspend(this);
 	return 0;
 }
 /***** Kernel Resume *****/
@@ -1699,7 +1774,7 @@ static int abov_resume(struct i2c_client *client)
 {
 	pabovXX_t this = i2c_get_clientdata(client);
 
-	abovXX_sar_resume(this);
+	abovXX_resume(this);
 	return 0;
 }
 /*====================================================*/
@@ -1882,26 +1957,17 @@ static void abovXX_worker_func(struct work_struct *work)
 }
 #endif
 
-void abovXX_sar_suspend(pabovXX_t this)
+void abovXX_suspend(pabovXX_t this)
 {
 	if (this) {
+		LOG_INFO("ABOV suspend: disable irq!\n");
 		disable_irq(this->irq);
-		write_register(this, ABOV_CTRL_MODE_RET, 0x02);
 	}
 }
-void abovXX_sar_resume(pabovXX_t this)
+void abovXX_resume(pabovXX_t this)
 {
 	if (this) {
-#ifdef USE_THREADED_IRQ
-		mutex_lock(&this->mutex);
-		/* Just in case need to reset any uncaught interrupts */
-		abovXX_process_interrupt(this, 0);
-		mutex_unlock(&this->mutex);
-#else
-		abovXX_schedule_work(this, 0);
-#endif
-		if (this->init)
-			this->init(this);
+		LOG_INFO("ABOV resume: enable irq!\n");
 		enable_irq(this->irq);
 	}
 }

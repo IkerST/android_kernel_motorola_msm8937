@@ -131,7 +131,7 @@ int32_t Check_FW_Ver(void)
 	}
 
 	// compare IC and binary FW version
-	if (buf[1] > fw_entry->data[FW_BIN_VER_OFFSET])
+	if (buf[1] == fw_entry->data[FW_BIN_VER_OFFSET])
 		return 1;
 	else
 		return 0;
@@ -943,7 +943,7 @@ static DEVICE_ATTR(poweron, 0444, nvt_poweron_show, NULL);
 static ssize_t nvt_ic_ver_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
-	return scnprintf(buf, PAGE_SIZE, "[FW]%02x,[IC]NT36525\n",
+	return scnprintf(buf, PAGE_SIZE, "[FW]%d,[IC]NT36525\n",
 		ts->fw_ver);
 }
 

@@ -1,3 +1,4 @@
+EXTRA_CFLAGS=-w
 #
 # USB peripheral controller drivers
 #

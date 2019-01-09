@@ -1027,14 +1027,15 @@ static int ft_gpio_configure(struct ft_ts_data *data, bool on)
 					"reset gpio request failed");
 				goto err_irq_gpio_dir;
 			}
-
-			err = gpio_direction_output(data->pdata->reset_gpio, 0);
-			if (err) {
-				dev_err(&data->client->dev,
-				"set_direction for reset gpio failed\n");
-				goto err_reset_gpio_dir;
+			if(data->pdata->family_id != 0x80){
+				err = gpio_direction_output(data->pdata->reset_gpio, 0);
+				if (err) {
+					dev_err(&data->client->dev,
+					"set_direction for reset gpio failed\n");
+					goto err_reset_gpio_dir;
+				}
+				msleep(data->pdata->hard_rst_dly);
 			}
-			msleep(data->pdata->hard_rst_dly);
 			gpio_set_value_cansleep(data->pdata->reset_gpio, 1);
 		}
 
@@ -1474,7 +1475,7 @@ static int fb_notifier_callback(struct notifier_block *self,
 		pr_debug("fb notification: event = %lu blank = %d\n", event,
 			*blank);
 		if (data->pdata->resume_in_workqueue) {
-			if (event == FB_EARLY_EVENT_BLANK) {
+			if (event == FB_EVENT_BLANK) {
 				if (*blank != FB_BLANK_POWERDOWN)
 					return 0;
 				flush_work(&data->fb_notify_work);
@@ -3464,7 +3465,27 @@ static int ft_ts_probe(struct i2c_client *client,
 		goto free_gpio;
 	}
 
+#if defined(CONFIG_TOUCHSCREEN_FOCALTECH_UPGRADE_8006M_MMI) && defined(CONFIG_TOUCHSCREEN_FOCALTECH_UPGRADE_8006U_MMI)
+	if (reg_value == 0x80) {
+		pdata->name = "ft8006m";
+		pdata->family_id = reg_value;
+                dev_info(&client->dev, "ft dbg: pos01-0 pdata->name=%s\n",pdata->name);
+	} else if (reg_value == 0xf0) {
+#ifdef CONFIG_TOUCHSCREEN_FOCALTECH_UPGRADE_8006S_MMI
+		pdata->name = "ft8006s";
+#else
+                pdata->name = "ft8006u";
+#endif
+		pdata->family_id = reg_value;
+                dev_info(&client->dev, "ft dbg: pos01 pdata->name=%s\n",pdata->name);
+	}
+#endif
+
 	data->family_id = pdata->family_id;
+
+#if defined(CONFIG_TOUCHSCREEN_FOCALTECH_UPGRADE_8006M_MMI) || defined(CONFIG_TOUCHSCREEN_FOCALTECH_UPGRADE_8006U_MMI)
+	fts_extra_init(client, input_dev, pdata);
+#endif
 
 	/*get some register information */
 	reg_addr = FT_REG_POINT_RATE;
@@ -3799,7 +3820,9 @@ static int ft_ts_remove(struct i2c_client *client)
 	data->irq_enabled = false;
 
 	ft_gpio_configure(data, false);
-
+#if defined(CONFIG_TOUCHSCREEN_FOCALTECH_UPGRADE_8006M_MMI) || defined(CONFIG_TOUCHSCREEN_FOCALTECH_UPGRADE_8006U_MMI)
+	fts_extra_exit();
+#endif
 	if (data->ts_pinctrl) {
 		if (IS_ERR_OR_NULL(data->pinctrl_state_release)) {
 			devm_pinctrl_put(data->ts_pinctrl);

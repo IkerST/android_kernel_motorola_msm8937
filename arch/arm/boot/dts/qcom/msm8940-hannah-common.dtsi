@@ -404,16 +404,17 @@
 
 &pmi8950_fg {
 	qcom,ext-sense-type; /* External Sense Resistor */
-	/delete-property/ qcom,thermal-coefficients ;
+	qcom,thermal-coefficients = /bits/ 16 <0xda86 0xf050 0x083c>;
 	qcom,irq-volt-empty-mv = <3200>;
 	qcom,fg-cutoff-voltage-mv = <3400>;
 	qcom,cl-vbat-est-thr-uv = <300000>;
 	qcom,fg-force-restart-enable;
+	/delete-property/ qcom,support_multi_coefficients;
 };
 
 &usb_otg {
 	qcom,hsusb-otg-phy-init-seq =
-		<0x40 0x80 0x6a 0x81 0x3f 0x82 0x13 0x83 0xffffffff>;
+		<0x60 0x80 0x6a 0x81 0x3f 0x82 0x13 0x83 0xffffffff>;
 	qcom,chg-dcp-icl = <1800>;
 };
 &soc{
