@@ -99,3 +99,6 @@ all.config
 
 # AnyKernel2
 AnyKernel2
+
+# QCOM WLAN PRIMA
+drivers/staging/prima
