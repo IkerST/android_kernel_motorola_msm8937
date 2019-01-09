@@ -96,3 +96,9 @@ x509.genkey
 
 # Kconfig presets
 all.config
+
+# AnyKernel2
+AnyKernel2/
+
+# WLAN Drivers
+drivers/staging/prima
