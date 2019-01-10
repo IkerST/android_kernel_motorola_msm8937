@@ -21,6 +21,7 @@
 #include <linux/rwsem.h>
 #include <linux/f2fs_fs.h>
 #include <linux/security.h>
+#include <linux/posix_acl_xattr.h>
 #include "f2fs.h"
 #include "xattr.h"
 
@@ -134,7 +135,8 @@ static int f2fs_xattr_advise_get(struct dentry *dentry, const char *name,
 	if (strcmp(name, "") != 0)
 		return -EINVAL;
 
-	*((char *)buffer) = F2FS_I(inode)->i_advise;
+	if (buffer)
+		*((char *)buffer) = F2FS_I(inode)->i_advise;
 	return sizeof(char);
 }
 
@@ -151,6 +153,7 @@ static int f2fs_xattr_advise_set(struct dentry *dentry, const char *name,
 		return -EINVAL;
 
 	F2FS_I(inode)->i_advise |= *(char *)value;
+	mark_inode_dirty(inode);
 	return 0;
 }
 
@@ -214,8 +217,8 @@ const struct xattr_handler f2fs_xattr_security_handler = {
 static const struct xattr_handler *f2fs_xattr_handler_map[] = {
 	[F2FS_XATTR_INDEX_USER] = &f2fs_xattr_user_handler,
 #ifdef CONFIG_F2FS_FS_POSIX_ACL
-	[F2FS_XATTR_INDEX_POSIX_ACL_ACCESS] = &f2fs_xattr_acl_access_handler,
-	[F2FS_XATTR_INDEX_POSIX_ACL_DEFAULT] = &f2fs_xattr_acl_default_handler,
+	[F2FS_XATTR_INDEX_POSIX_ACL_ACCESS] = &posix_acl_access_xattr_handler,
+	[F2FS_XATTR_INDEX_POSIX_ACL_DEFAULT] = &posix_acl_default_xattr_handler,
 #endif
 	[F2FS_XATTR_INDEX_TRUSTED] = &f2fs_xattr_trusted_handler,
 #ifdef CONFIG_F2FS_FS_SECURITY
@@ -227,8 +230,8 @@ static const struct xattr_handler *f2fs_xattr_handler_map[] = {
 const struct xattr_handler *f2fs_xattr_handlers[] = {
 	&f2fs_xattr_user_handler,
 #ifdef CONFIG_F2FS_FS_POSIX_ACL
-	&f2fs_xattr_acl_access_handler,
-	&f2fs_xattr_acl_default_handler,
+	&posix_acl_access_xattr_handler,
+	&posix_acl_default_xattr_handler,
 #endif
 	&f2fs_xattr_trusted_handler,
 #ifdef CONFIG_F2FS_FS_SECURITY
@@ -496,8 +499,11 @@ static int __f2fs_setxattr(struct inode *inode, int index,
 
 	len = strlen(name);
 
-	if (len > F2FS_NAME_LEN || size > MAX_VALUE_LEN(inode))
+	if (len > F2FS_NAME_LEN)
 		return -ERANGE;
+
+	if (size > MAX_VALUE_LEN(inode))
+		return -E2BIG;
 
 	base_addr = read_all_xattrs(inode, ipage);
 	if (!base_addr)
@@ -581,11 +587,18 @@ static int __f2fs_setxattr(struct inode *inode, int index,
 		inode->i_ctime = CURRENT_TIME;
 		clear_inode_flag(fi, FI_ACL_MODE);
 	}
+	if (index == F2FS_XATTR_INDEX_ENCRYPTION &&
+			!strcmp(name, F2FS_XATTR_NAME_ENCRYPTION_CONTEXT))
+		f2fs_set_encrypted_inode(inode);
 
 	if (ipage)
 		update_inode(inode, ipage);
 	else
 		update_inode_page(inode);
+
+	if (S_ISDIR(inode->i_mode) && len == F2FS_XATTR_DIR_NOCASE_LEN &&
+	    !memcmp(name, F2FS_XATTR_DIR_NOCASE, len))
+		f2fs_set_nocase_dop(inode);
 exit:
 	kzfree(base_addr);
 	return error;
