@@ -6,7 +6,7 @@ export CXXFLAGS="-Wno-error"
 export ARCH=arm
 main_menu() {
 PS3='Please enter your choice: '
-options=("Moto E5 Plus XT1924-7" "Moto E5 Plus XT1924-5" "Moto E5 Play XT1924-4" "Moto G6 Play (jeter)" "Quit")
+options=("Moto E5 Plus XT1924-7" "Moto E5 Plus XT1924-5" "Moto E5 Play XT1924-4" "Moto G6 Play (jeter)" "Moto G6 Play (aljeter)" "Quit")
 select opt in "${options[@]}"
 do
     case $opt in
@@ -25,6 +25,11 @@ do
             ;;
 	"Moto G6 Play (jeter)")
 	    make jeter_defconfig
+	    compile
+	    break
+	    ;;
+	"Moto G6 Play (aljeter)")
+	    make aljeter_defconfig
 	    compile
 	    break
 	    ;;
