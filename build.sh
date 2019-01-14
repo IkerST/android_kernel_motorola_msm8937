@@ -82,7 +82,7 @@ echo "Preparing build"
 make $1_defconfig
 echo "Building with " $CORES " CPU(s)"
 echo "And " $THREADS " threads"
-make -j$THREADS
+make -j$THREADS -s
 
 if [ -e  arch/arm/boot/zImage ];
 then
