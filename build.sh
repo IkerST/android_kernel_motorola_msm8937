@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+#
+#   This script depends on:
+#   rpl and zip
+#
+
 function _usage() {
 	cat <<-EOF
 
@@ -7,6 +12,24 @@ function _usage() {
 	Usage: $0 [device-codename] [toolchain]
 
 	EOF
+}
+
+function _flashable_zip() {
+    rpl "%%DO_CHECK%%" "$1" anykernel.sh
+    if [ $1 -eq 1 ]; then
+        FINAL_ZIP="$FINAL_ZIP_S""check""$FINAL_ZIP_E"
+    elif [ $1 -eq 0 ]; then
+        FINAL_ZIP="$FINAL_ZIP_S""no_check""$FINAL_ZIP_E"
+    fi
+    zip $KERNEL_DIR/$FINAL_ZIP $(ls) -r &>/dev/null
+}
+
+function _set_device_zip() {
+    rpl "%%DEVICE%%" "$DEVICE" anykernel.sh
+}
+
+function _clean() {
+    rm -rf $TMP_DIR
 }
 
 # parse positional parameters
@@ -22,15 +45,17 @@ git clone -b oreo-8.0.0-release-jeter https://github.com/MotorolaMobilityLLC/ven
 echo "Starting build"
 
 KERNEL_DIR=$PWD
-ANYKERNEL_DIR=$KERNEL_DIR/AnyKernel2/$1
+ANYKERNEL_DIR=$KERNEL_DIR/AnyKernel2/msm8937
 TOOLCHAINDIR=$2
 DATE=$(date +"%d%m%Y")
 KERNEL_NAME="Kernel"
-DEVICE="-$1-"
+DEVICE="$1"
 VER=$(cat version)
-FINAL_ZIP="$KERNEL_NAME""$DEVICE""$DATE""$VER".zip
+FINAL_ZIP_S="$KERNEL_NAME""-""$DEVICE""-""$DATE""-"
+FINAL_ZIP_E="-""$VER".zip
 CORES=$( nproc --all)
 THREADS=$( echo $CORES + $CORES | bc )
+TMP_DIR=$(mktemp -d .zip.XXX)
 
 export ARCH=arm
 export KBUILD_BUILD_USER="ist"
@@ -62,16 +87,25 @@ make -j$THREADS
 if [ -e  arch/arm/boot/zImage ];
 then
 echo "Kernel compilation completed"
-cp $KERNEL_DIR/arch/arm/boot/zImage $ANYKERNEL_DIR/
-cd $ANYKERNEL_DIR
 echo "Making Flashable zip"
 echo "Generating changelog"
-git log --graph --pretty=format:'%s' --abbrev-commit -n 200  > $ANYKERNEL_DIR/changelog.txt
+git log --graph --pretty=format:'%s' --abbrev-commit -n 100  > $TMP_DIR/changelog.txt
 echo "Changelog generated"
-cp arch/arm/boot/zImage $ANYKERNEL_DIR
-cd $ANYKERNEL_DIR
-zip ../$FINAL_ZIP $(ls) -r &>/dev/null
-echo "Flashable zip Created"
+cd $TMP_DIR
+echo "Creating check zip"
+cp -R $ANYKERNEL_DIR/* $KERNEL_DIR/$TMP_DIR/
+cp $KERNEL_DIR/arch/arm/boot/zImage $KERNEL_DIR/$TMP_DIR/
+_set_device_zip
+_flashable_zip 1
+echo "Creating no check zip"
+cp -R $ANYKERNEL_DIR/* $KERNEL_DIR/$TMP_DIR/
+cp $KERNEL_DIR/arch/arm/boot/zImage $ANYKERNEL_DIR/$TMP_DIR/
+_set_device_zip
+_flashable_zip 0
+echo "Cleaning"
+_clean
+echo "Flashable zips Created"
+
 else
 echo "Kernel not compiled,fix errors and compile again"
 fi
