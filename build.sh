@@ -14,6 +14,12 @@ function _usage() {
 	EOF
 }
 
+function _prepare() {
+	git clone https://github.com/IkerST/AnyKernel2 || (cd AnyKernel2 && git pull)
+	git clone -b oreo-8.0.0-release-jeter https://github.com/MotorolaMobilityLLC/vendor-qcom-opensource-wlan-prima drivers/staging/prima || ( cd drivers/staging/prima && git pull)
+	git clone -b oreo-8.0.0-release-aljeter git@github.com:MotorolaMobilityLLC/motorola-kernel ../motorola/kernel || (cd ../motorola/kernel && git pull)
+}
+
 function _flashable_zip() {
     rpl "%%DO_CHECK%%" "$1" anykernel.sh
     if [ $1 -eq 1 ]; then
@@ -39,8 +45,7 @@ if [ "$#" -lt 2 ] || [ "$#" -gt 2 ]; then
 fi
 
 echo "Preparing Files"
-git clone https://github.com/IkerST/AnyKernel2 || (cd AnyKernel2 && git pull)
-git clone -b oreo-8.0.0-release-jeter https://github.com/MotorolaMobilityLLC/vendor-qcom-opensource-wlan-prima drivers/staging/prima || ( cd drivers/staging/prima && git pull)
+_prepare
 
 echo "Starting build"
 
