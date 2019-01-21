@@ -17,7 +17,7 @@ function _usage() {
 function _prepare() {
 	git clone https://github.com/IkerST/AnyKernel2 || (cd AnyKernel2 && git pull)
 	git clone -b oreo-8.0.0-release-jeter https://github.com/MotorolaMobilityLLC/vendor-qcom-opensource-wlan-prima drivers/staging/prima || ( cd drivers/staging/prima && git pull)
-	git clone -b oreo-8.0.0-release-aljeter git@github.com:MotorolaMobilityLLC/motorola-kernel ../motorola/kernel || (cd ../motorola/kernel && git pull)
+	git clone -b oreo-8.0.0-release-aljeter https://github.com/MotorolaMobilityLLC/motorola-kernel ../motorola/kernel || (cd ../motorola/kernel && git pull)
 }
 
 function _flashable_zip() {
