@@ -3,7 +3,7 @@ pipeline {
   stages {
     stage('Start Build (aljeter)') {
       steps {
-        sh 'make aljeter_defconfig && make ARCH=arm CROSS_COMPILE=../gcc-linaro-7.1.1/bin/arm-linux-gnueabihf-'
+        sh 'make ARCH=arm aljeter_defconfig && make ARCH=arm CROSS_COMPILE=../gcc-linaro-7.1.1/bin/arm-linux-gnueabihf-'
       }
     }
     stage('Copy zImage (aljeter)') {
@@ -18,12 +18,12 @@ pipeline {
     }
     stage('Clean (aljeter)') {
       steps {
-        sh 'make aljeter_defconfig && make clean'
+        sh 'make ARCH=arm aljeter_defconfig && make clean'
       }
     }
     stage('Start Build (jeter)') {
       steps {
-        sh 'make jeter_defconfig && make ARCH=arm CROSS_COMPILE=../gcc-linaro-7.1.1/bin/arm-linux-gnueabihf-'
+        sh 'make ARCH=arm jeter_defconfig && make ARCH=arm CROSS_COMPILE=../gcc-linaro-7.1.1/bin/arm-linux-gnueabihf-'
       }
     }
     stage('Copy zImage (jeter)') {
@@ -38,7 +38,7 @@ pipeline {
     }
     stage('Clean (jeter)') {
       steps {
-        sh 'make jeter_defconfig && make clean'
+        sh 'make ARCH=arm jeter_defconfig && make clean'
       }
     }
      stage('Upload Release') {
