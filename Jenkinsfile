@@ -6,7 +6,7 @@ pipeline {
         sh 'make aljeter_defconfig && make ARCH=arm CROSS_COMPILE=../gcc-linaro-7.1.1/bin/arm-linux-gnueabihf-'
       }
     }
-    stage('Copy zImage (jeter)') {
+    stage('Copy zImage (aljeter)') {
       steps {
         sh 'cp arch/arm/boot/zImage kernel-aljeter-zImage'
       }
