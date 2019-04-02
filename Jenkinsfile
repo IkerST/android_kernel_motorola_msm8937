@@ -44,7 +44,7 @@ pipeline {
      stage('Upload Release') {
       steps {
         dir(path: 'release') {
-          unarchive mapping: ['*' : '.']
+          unarchive mapping: ['.' : '.']
           withCredentials([
            string(credentialsId: 'TG_BOT_API', variable: 'TG_BOT_API'),
            string(credentialsId: 'GITHUB_API', variable: 'GIT_API_KEY')
