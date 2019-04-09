@@ -1,6 +1,11 @@
 pipeline {
   agent any
   stages {
+    stage('Submodules') {
+      steps{
+        sh 'bash submodules.sh'
+      }
+    }
     stage('Start Build (aljeter)') {
       steps {
         sh 'make ARCH=arm aljeter_defconfig && make -j8 ARCH=arm CROSS_COMPILE=../gcc-linaro-7.1.1/bin/arm-linux-gnueabihf-'
